@@ -41,21 +41,24 @@ export default async function handler(req, res) {
       case "upload":
         result = await handleUpload(req.body, API_KEY);
         break;
-      case "analyze":
-        await new Promise(resolve => setTimeout(resolve, 2000)); // ← ajoutez cette ligne
-        const analyzeParams = new URLSearchParams({  
-        result = await handleAnalyze(req.body, API_KEY);
-        break;
-      case "publish":
-        result = await handlePublish(req.body, API_KEY);
-        break;
-      case "run-notebook":
-        result = await handleRunNotebook(req.body, API_KEY);
-        break;
-      default:
-        res.status(400).json({ error: "Action inconnue : " + action });
-        return;
-    }
+      case "analyze": {
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  const { itemId, csvText } = body;
+  const analyzeParams = new URLSearchParams({
+    text: csvText,
+    fileType: "csv",
+    f: "json",
+    token: API_KEY,
+    analyzeParameters: JSON.stringify({ locationType: "none" })
+  });
+  const analyzeResp = await fetch(`${PORTAL_URL}/sharing/rest/content/features/analyze`, {
+    method: "POST",
+    body: analyzeParams
+  });
+  const analyzeData = await analyzeResp.json();
+  if (analyzeData.error) throw new Error("analyze : " + analyzeData.error.message);
+  return res.status(200).json(analyzeData);
+}
 
     res.status(200).json(result);
 
