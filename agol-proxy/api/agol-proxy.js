@@ -4,6 +4,16 @@
 // elle n'est jamais transmise au client.
 //
 // Fichier à placer dans : /api/agol-proxy.js (à la racine du projet Vercel)
+export default async function handler(req, res) {
+  // ── Headers CORS ──
+  res.setHeader("Access-Control-Allow-Origin", "https://antoineifv.github.io");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // Répondre aux requêtes préliminaires OPTIONS
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
 
 const PORTAL_URL = "https://vignevin.maps.arcgis.com";
 
