@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Import données & lancement Notebook</title>
+<title>Import données ArcGIS</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -12,10 +12,8 @@
   .card-name { font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 1.25rem; }
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 12px; font-weight: 500; color: #475569; margin-bottom: 5px; }
-  .field input, .field select { width: 100%; padding: 9px 11px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #1e293b; }
-  .field input:focus, .field select:focus { outline: none; border-color: #2563eb; }
-  .row2 { display: flex; gap: 10px; }
-  .row2 .field { flex: 1; }
+  .field input { width: 100%; padding: 9px 11px; border: 1px solid #e2e8f0; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #1e293b; }
+  .field input:focus { outline: none; border-color: #2563eb; }
   .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all .2s; background: #2563eb; color: white; margin-top: 6px; }
   .btn:hover:not(:disabled) { background: #1d4ed8; }
   .btn:disabled { opacity: .6; cursor: not-allowed; }
@@ -34,36 +32,17 @@
 </head>
 <body>
 <div class="card">
-  <div class="card-title">ArcGIS Notebook</div>
-  <div class="card-name">Importer mes données &amp; lancer l'analyse</div>
+  <div class="card-title">ArcGIS Online</div>
+  <div class="card-name">Importer et publier mes données</div>
 
   <div class="field">
     <label>Fichier CSV</label>
     <input type="file" id="fileInput" accept=".csv">
   </div>
 
-  <div class="row2">
-    <div class="field">
-      <label>Date de début</label>
-      <input type="date" id="dateDebut" value="2026-01-01">
-    </div>
-    <div class="field">
-      <label>Date de fin</label>
-      <input type="date" id="dateFin" value="2026-12-31">
-    </div>
-  </div>
-
-  <div class="field">
-    <label>Statistique à calculer</label>
-    <select id="choixStat">
-      <option value="Moyenne">Moyenne</option>
-      <option value="Médiane">Médiane</option>
-    </select>
-  </div>
-
   <button class="btn" id="runBtn" onclick="runAll()">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-    Lancer l'analyse
+    Importer et publier
   </button>
 
   <div class="status" id="status"></div>
@@ -72,9 +51,8 @@
 
 <script>
 // ── Configuration ────────────────────────────────────────────────────
-const PROXY_URL  = "https://project-geys4.vercel.app/api/agol-proxy";
-const USERNAME    = "STAGE_IFV";
-const NOTEBOOK_ID  = "515a1b03a6234656bd4754e210b1bd17";
+const PROXY_URL = "https://project-geys4.vercel.app/api/agol-proxy";
+const USERNAME   = "STAGE_IFV";
 // ────────────────────────────────────────────────────────────────────────
 
 function addLog(msg) {
@@ -116,9 +94,6 @@ function fileToBase64(file) {
 async function runAll() {
   const btn = document.getElementById("runBtn");
   const file = document.getElementById("fileInput").files[0];
-  const dateDebut = document.getElementById("dateDebut").value;
-  const dateFin = document.getElementById("dateFin").value;
-  const choixStat = document.getElementById("choixStat").value;
 
   if (!file) { alert("Choisissez un fichier CSV"); return; }
 
@@ -147,8 +122,9 @@ async function runAll() {
     // ── 3. Analyze via le proxy ──
     setStatus("info", `<div class="spinner"></div>`, "Analyse de la structure…");
     addLog("Analyse du CSV…");
-    const analyzeResult = await callProxy("analyze", { itemId: rawItemId });
+    const analyzeResult = await callProxy("analyze", { itemId: rawItemId, csvText: csvCorrige });
     addLog("Structure détectée ✓");
+    console.log("publishParameters reçus :", JSON.stringify(analyzeResult.publishParameters, null, 2));
 
     // ── 4. Publish via le proxy ──
     setStatus("info", `<div class="spinner"></div>`, "Publication de la couche…");
@@ -161,26 +137,12 @@ async function runAll() {
     const layerItemId = publishResult.services[0].serviceItemId;
     addLog("Couche publiée ✓ (id: " + layerItemId.substring(0,8) + "…)");
 
-    // ── 5. Run Notebook via le proxy ──
-    setStatus("info", `<div class="spinner"></div>`, "Lancement du Notebook…");
-    addLog("Exécution du Notebook…");
-    await callProxy("run-notebook", {
-      notebookId: NOTEBOOK_ID,
-      notebookParams: {
-        item_id_utilisateur: layerItemId,
-        date_debut: new Date(dateDebut).getTime(),
-        date_fin: new Date(dateFin).getTime(),
-        choix_stat: choixStat
-      }
-    });
-    addLog("Notebook lancé ✓");
-
-    setStatus("success", `<div class="dot"></div>`, "Analyse terminée — résultats disponibles ✓");
+    setStatus("success", `<div class="dot"></div>`, "Import terminé — couche publiée ✓");
     btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Terminé`;
 
     setTimeout(() => {
       btn.disabled = false;
-      btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Lancer l'analyse`;
+      btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Importer et publier`;
     }, 4000);
 
   } catch (err) {
