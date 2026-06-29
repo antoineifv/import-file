@@ -94,6 +94,15 @@ async function handlePublish({ itemId, publishParameters }, token) {
   publishParameters.name = "couche_" + Date.now();
   publishParameters.locationType = "none";
   delete publishParameters.geometryType;
+  
+  // Supprimer aussi geometryType dans layerInfo
+  if (publishParameters.layerInfo) {
+    delete publishParameters.layerInfo.geometryType;
+    publishParameters.layerInfo.name = publishParameters.name;
+    publishParameters.layerInfo.type = "Table";
+  }
+
+  console.log("publishParameters envoyés à AGOL :", JSON.stringify(publishParameters));
 
   const params = new URLSearchParams({
     itemId,
@@ -108,9 +117,10 @@ async function handlePublish({ itemId, publishParameters }, token) {
     { method: "POST", body: params }
   );
   const data = await resp.json();
+  console.log("Réponse AGOL publish :", JSON.stringify(data));
   if (data.error) throw new Error("publish : " + data.error.message);
   if (!data.services || !data.services[0] || data.services[0].success === false) {
-    throw new Error("publish : échec de la publication");
+    throw new Error("publish : " + JSON.stringify(data.services));
   }
   return data;
 }
