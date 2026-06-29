@@ -4,6 +4,9 @@
 // elle n'est jamais transmise au client.
 //
 // Fichier à placer dans : /api/agol-proxy.js (à la racine du projet Vercel)
+
+const PORTAL_URL = "https://vignevin.maps.arcgis.com";
+
 export default async function handler(req, res) {
   // ── Headers CORS ──
   res.setHeader("Access-Control-Allow-Origin", "https://antoineifv.github.io");
@@ -13,19 +16,6 @@ export default async function handler(req, res) {
   // Répondre aux requêtes préliminaires OPTIONS
   if (req.method === "OPTIONS") {
     return res.status(200).end();
-  }
-
-const PORTAL_URL = "https://vignevin.maps.arcgis.com";
-
-export default async function handler(req, res) {
-  // Autorise les requêtes depuis votre portail (CORS)
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") {
-    res.status(200).end();
-    return;
   }
 
   if (req.method !== "POST") {
@@ -51,24 +41,19 @@ export default async function handler(req, res) {
       case "upload":
         result = await handleUpload(req.body, API_KEY);
         break;
-      case "analyze": {
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  const { itemId, csvText } = body;
-  const analyzeParams = new URLSearchParams({
-    text: csvText,
-    fileType: "csv",
-    f: "json",
-    token: API_KEY,
-    analyzeParameters: JSON.stringify({ locationType: "none" })
-  });
-  const analyzeResp = await fetch(`${PORTAL_URL}/sharing/rest/content/features/analyze`, {
-    method: "POST",
-    body: analyzeParams
-  });
-  const analyzeData = await analyzeResp.json();
-  if (analyzeData.error) throw new Error("analyze : " + analyzeData.error.message);
-  return res.status(200).json(analyzeData);
-}
+      case "analyze":
+        result = await handleAnalyze(req.body, API_KEY);
+        break;
+      case "publish":
+        result = await handlePublish(req.body, API_KEY);
+        break;
+      case "run-notebook":
+        result = await handleRunNotebook(req.body, API_KEY);
+        break;
+      default:
+        res.status(400).json({ error: "Action inconnue : " + action });
+        return;
+    }
 
     res.status(200).json(result);
 
@@ -79,7 +64,6 @@ export default async function handler(req, res) {
 
 // ── addItem : upload du fichier CSV brut ──────────────────────────────
 async function handleUpload({ username, fileName, fileContent }, token) {
-  // fileContent arrive en base64 depuis le navigateur (voir formulaire)
   const buffer = Buffer.from(fileContent, "base64");
   const blob = new Blob([buffer], { type: "text/csv" });
 
@@ -100,12 +84,14 @@ async function handleUpload({ username, fileName, fileContent }, token) {
 }
 
 // ── analyze : détection automatique de la structure du CSV ────────────
-async function handleAnalyze({ itemId }, token) {
+// On passe le contenu en texte brut (csvText) plutôt que l'itemId,
+// pour éviter un éventuel délai d'indexation côté AGOL après l'upload.
+async function handleAnalyze({ csvText }, token) {
   const params = new URLSearchParams({
-    itemId,
+    text: csvText,
+    fileType: "csv",
     f: "json",
     token,
-    fileType: "csv",
     analyzeParameters: JSON.stringify({ locationType: "none" })
   });
 
