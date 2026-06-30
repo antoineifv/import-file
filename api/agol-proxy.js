@@ -112,7 +112,7 @@ async function getOAuthToken() {
 
 // ── publish (utilise un token OAuth2, pas la clé API) ──────────────────
 async function handlePublish({ itemId }, token) {
-  await new Promise(resolve => setTimeout(resolve, 5000));
+  await new Promise(resolve => setTimeout(resolve, 10000));
   const oauthToken = await getOAuthToken();
 
   const name = "couche_" + Date.now();
