@@ -89,13 +89,35 @@ async function handleAnalyze({ csvText }, token) {
   return data;
 }
 
-// ── publish ──────────────────────────────────────────────────────────
+// ── Génère un token OAuth2 via client_credentials ──────────────────────
+async function getOAuthToken() {
+  const clientId = process.env.AGOL_CLIENT_ID;
+  const clientSecret = process.env.AGOL_CLIENT_SECRET;
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    grant_type: "client_credentials",
+    f: "json"
+  });
+
+  const resp = await fetch("https://www.arcgis.com/sharing/rest/oauth2/token", {
+    method: "POST",
+    body: params
+  });
+  const data = await resp.json();
+  if (data.error) throw new Error("oauth2/token : " + JSON.stringify(data.error));
+  return data.access_token;
+}
+
+// ── publish (utilise un token OAuth2, pas la clé API) ──────────────────
 async function handlePublish({ itemId, publishParameters }, token) {
+  const oauthToken = await getOAuthToken();
+
   publishParameters.name = "couche_" + Date.now();
   publishParameters.locationType = "none";
   delete publishParameters.geometryType;
-  
-  // Supprimer aussi geometryType dans layerInfo
+
   if (publishParameters.layerInfo) {
     delete publishParameters.layerInfo.geometryType;
     publishParameters.layerInfo.name = publishParameters.name;
@@ -108,7 +130,7 @@ async function handlePublish({ itemId, publishParameters }, token) {
     itemId,
     filetype: "csv",
     publishParameters: JSON.stringify(publishParameters),
-    token,
+    token: oauthToken,
     f: "json"
   });
 
