@@ -111,25 +111,21 @@ async function getOAuthToken() {
 }
 
 // ── publish (utilise un token OAuth2, pas la clé API) ──────────────────
-async function handlePublish({ itemId, publishParameters }, token) {
+async function handlePublish({ itemId }, token) {
+  await new Promise(resolve => setTimeout(resolve, 5000));
   const oauthToken = await getOAuthToken();
 
-  publishParameters.name = "couche_" + Date.now();
-  publishParameters.locationType = "none";
-  delete publishParameters.geometryType;
-
-  if (publishParameters.layerInfo) {
-    delete publishParameters.layerInfo.geometryType;
-    publishParameters.layerInfo.name = publishParameters.name;
-    publishParameters.layerInfo.type = "Table";
-  }
-
-  console.log("publishParameters envoyés à AGOL :", JSON.stringify(publishParameters));
+  const name = "couche_" + Date.now();
+  const simplePublishParams = {
+    type: "csv",
+    name: name,
+    locationType: "none"
+  };
 
   const params = new URLSearchParams({
     itemId,
     filetype: "csv",
-    publishParameters: JSON.stringify(publishParameters),
+    publishParameters: JSON.stringify(simplePublishParams),
     token: oauthToken,
     f: "json"
   });
@@ -139,7 +135,7 @@ async function handlePublish({ itemId, publishParameters }, token) {
     { method: "POST", body: params }
   );
   const data = await resp.json();
-  console.log("Réponse AGOL publish :", JSON.stringify(data));
+  console.log("Réponse AGOL publish (simplifié) :", JSON.stringify(data));
   if (data.error) throw new Error("publish : " + data.error.message);
   if (!data.services || !data.services[0] || data.services[0].success === false) {
     throw new Error("publish : " + JSON.stringify(data.services));
