@@ -142,3 +142,29 @@ async function handlePublish({ itemId, publishParameters }) {
   }
   return data;
 }
+
+// Afficher ID
+const result = await response.json();
+
+if (result.success) {
+  const itemId = result.itemId;
+
+  // Affiche la boîte de résultat
+  document.getElementById("item-id-value").textContent = itemId;
+  document.getElementById("result-box").style.display = "block";
+
+  // Gère le clic sur le bouton copier
+  document.getElementById("copy-btn").onclick = async () => {
+    try {
+      await navigator.clipboard.writeText(itemId);
+      const feedback = document.getElementById("copy-feedback");
+      feedback.style.display = "inline";
+      setTimeout(() => { feedback.style.display = "none"; }, 2000);
+    } catch (err) {
+      console.error("Erreur lors de la copie :", err);
+      alert("Impossible de copier automatiquement. ID : " + itemId);
+    }
+  };
+} else {
+  // gestion d'erreur existante
+}
