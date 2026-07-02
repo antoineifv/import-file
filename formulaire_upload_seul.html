@@ -158,6 +158,7 @@ async function runAll() {
       itemId: rawItemId,
       publishParameters: analyzeResult.publishParameters
     });
+    console.log("Réponse publish reçue :", publishResult);
     const layerItemId = publishResult.services[0].serviceItemId;
     addLog("Couche publiée ✓ (id: " + layerItemId.substring(0,8) + "…)");
 
